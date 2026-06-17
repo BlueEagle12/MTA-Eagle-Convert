@@ -1,107 +1,91 @@
+-- Writes MTA .map files (placements) for each zone.
 fileValid = {}
 validObject = {}
 
-function writeInitalMap(mapPath,shortName)
-	if not fileValid[mapPath] then
+local function writeInitalMap(mapPath, shortName)
+    if fileValid[mapPath] then
+        return fileValid[mapPath]
+    end
 
-		metaList["Maps"]["zones/"..shortName.."/"..shortName..".map"] = true
+    metaList["Maps"]["zones/" .. shortName .. "/" .. shortName .. ".map"] = true
 
-		local f = fileCreate(mapPath)
-		fileValid[mapPath] = f
-		if not f then
-			outputDebugString("Failed to create map file at: " .. mapPath, 1)
-			return
-		else
-			fileWrite(f, '<map>\n')
-			return f
-		end
-	else
-		return fileValid[mapPath]
-	end
+    local f = fileCreate(mapPath)
+    fileValid[mapPath] = f
+    if not f then
+        outputDebugString("Failed to create map file at: " .. mapPath, 1)
+        return
+    end
+
+    fileWrite(f, "<map>\n")
+    return f
 end
 
-mapFormat = {'id','posX','posY','posZ','rotX','rotY','rotZ','lodParent','uniqueID','lodParentID','interior'}
+local mapFormat = {"id", "posX", "posY", "posZ", "rotX", "rotY", "rotZ", "lodParent", "uniqueID", "lodParentID", "interior"}
 
-function formatMap (type,id,x,y,z,xr,yr,zr,lodParent,unqiueID,lodParentID,interior)
-	local Out = {}
-	local Out2 = {}
-	local In = {id,x,y,z,xr,yr,zr,lodParent or "",(unqiueID or 0) > 0 and unqiueID or "",lodParentID or "",(tonumber((interior or 0))> 0 and interior or "")}
+local function formatMap(type, id, x, y, z, xr, yr, zr, lodParent, uniqueID, lodParentID, interior)
+    local order = {}
+    local values = {}
+    local input = {
+        id, x, y, z, xr, yr, zr,
+        lodParent or "",
+        (uniqueID or 0) > 0 and uniqueID or "",
+        lodParentID or "",
+        (tonumber(interior or 0) > 0 and interior or ""),
+    }
 
-	for i,v in ipairs(In) do
-		if not(v == "") then
-			table.insert(Out,mapFormat[i])
-			Out2[mapFormat[i]] = v
-		end
-	end
+    for i, v in ipairs(input) do
+        if v ~= "" then
+            table.insert(order, mapFormat[i])
+            values[mapFormat[i]] = v
+        end
+    end
 
-	line = string.format('    <%s ', type)
-	first = true
+    local line = string.format("    <%s ", type)
+    for _, key in ipairs(order) do
+        line = line .. string.format(' %s="%s"', key, values[key])
+    end
+    line = line .. string.format("></%s>\n", type)
 
-	for i,v in pairs(Out) do
-		if first then
-			first = nil
-			line = (line .. string.format(' %s="%s"',v,Out2[v]))
-		else
-			line = (line .. string.format(' %s="%s"',v,Out2[v]))
-		end
-	end
-
-	line = line..string.format('></%s>\n',type)
-
-	return line
+    return line
 end
 
-
-function writeMapFile(objects, mapPath,short)
-
+function writeMapFile(objects, mapPath, short)
+    local mF
 
     for _, obj in ipairs(objects or {}) do
+        local mName = obj.modelName
 
-        -- We'll build a single line like:
-        --   <building id="apairprtbits01" model="8585" posX="-1226.50781" posY="-994.60938" ... ></building>
+        if defValid2[mName] or defaultIDs[mName] or defValid3[mName] then
+            zones[short] = true
 
-		local mName = obj.modelName
-		
-		local line
+            mF = writeInitalMap(mapPath, short)
 
-		if (defValid2[mName] or defaultIDs[mName] or defValid3[mName]) then
+            obj.type = defaultIDs[obj.modelName] and "object" or "building"
+            validObject[mName:gsub("%s+", "")] = true
 
-			zones[short] = true
+            local line = formatMap(
+                obj.type or "building",
+                obj.modelName,
+                obj.position.x, obj.position.y, obj.position.z,
+                obj.rotationEuler.x, obj.rotationEuler.y, obj.rotationEuler.z,
+                obj.lodParent,
+                obj.uniqueID,
+                obj.lodParentID,
+                obj.interior
+            )
 
-			
-			mF = writeInitalMap(mapPath,short)
-
-
-			obj.type = (defaultIDs[obj.modelName]) and "object" or "building"
-
-			validObject[mName:gsub("%s+", "")] = true
-
-			line = formatMap(
-				(obj.type or "building"),
-				obj.modelName,
-				obj.position.x, obj.position.y, obj.position.z,
-				obj.rotationEuler.x, obj.rotationEuler.y, obj.rotationEuler.z,
-				obj.lodParent,
-				obj.uniqueID,
-				obj.lodParentID,
-				obj.interior
-			)
-
-		else
-			outputDebugString2("Invalid ID: " .. mName)
-		end
-        
-		if line then
-       		fileWrite(mF, line)
-		end
+            if mF and line then
+                fileWrite(mF, line)
+            end
+        else
+            outputDebugString2("Invalid ID: " .. mName)
+        end
     end
-    
-    -- close out the XML
-	if mF then
-		fileWrite(mF, '</map>\n')
-		fileClose(mF)
-	end
-    
-	mF = nil
+
+    if mF then
+        fileWrite(mF, "</map>\n")
+        fileClose(mF)
+    end
+
     outputDebugString("Successfully wrote .map file: " .. mapPath)
 end

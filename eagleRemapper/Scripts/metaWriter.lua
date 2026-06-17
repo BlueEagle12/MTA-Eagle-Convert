@@ -1,56 +1,28 @@
-local metaEntries = {
-    {
-        tag = "info",
-        attributes = {
-            author  = "BlueEagle",
-            version = "3.0.0",
-            name    = "Vice_City",
-        }
-    },
+-- Generates the output resource's meta.xml, the zone list, and the debug log.
 
-    {
-        tag = "file",
-        attributes = {
-            src  = "eagleZones.txt",
-            type = "client",
-        }}
-}
+local function fileEntry(src)
+    return {tag = "file", attributes = {src = src, type = "client"}}
+end
 
-
-
-
-
-function writeMetaFile(entries, metaPath)
-    -- Create (or overwrite) the meta.xml file in your resource
+local function writeMetaFile(entries, metaPath)
     local f = fileCreate(metaPath)
     if not f then
         outputDebugString("Failed to create " .. metaPath, 1)
         return false
     end
 
-    -- Write XML header and <meta> root tag
-    fileWrite(f, '<meta>\n')
+    fileWrite(f, "<meta>\n")
 
-    for i, entry in ipairs(entries) do
-
+    for _, entry in ipairs(entries) do
         if entry == "blank" then
-            line = "\n".."\n"
-
-            fileWrite(f, line)
+            fileWrite(f, "\n\n")
         else
-            local tag = entry.tag or "info"  -- default to <info> if not specified
-            local attrs = entry.attributes or {}
-
-            -- Build the line: e.g. <script src="foo.lua" type="server" />
+            local tag = entry.tag or "info"
             local line = "    <" .. tag
-            for k, v in pairs(attrs) do
-                -- Escape " if needed, though typically your paths won't have quotes
+            for k, v in pairs(entry.attributes or {}) do
                 line = line .. string.format(' %s="%s"', k, tostring(v))
             end
-
-            line = line .. " />\n"
-
-            fileWrite(f, line)
+            fileWrite(f, line .. " />\n")
         end
     end
 
@@ -61,112 +33,70 @@ function writeMetaFile(entries, metaPath)
     return true
 end
 
-
 function writeZoneFile()
-    -- Create (or overwrite) the meta.xml file in your resource
-    local f = fileCreate('out/eagleZones.txt')
+    local f = fileCreate("out/eagleZones.txt")
     if not f then
-        outputDebugString("Failed to create " .. 'eagleZones.txt', 1)
+        outputDebugString("Failed to create eagleZones.txt", 1)
         return false
     end
 
-
-    for i, entry in pairs(zones) do
-        fileWrite(f, i.."\n")
+    for zone in pairs(zones) do
+        fileWrite(f, zone .. "\n")
     end
 
     fileClose(f)
-
-    outputDebugString("Wrote eagleZones.txt to: " .. 'out/eagleZones.txt')
+    outputDebugString("Wrote eagleZones.txt to: out/eagleZones.txt")
     return true
 end
-
-
 
 function writeDebugFile()
-    -- Create (or overwrite) the meta.xml file in your resource
-    local f = fileCreate('debug.txt')
+    local f = fileCreate("debug.txt")
+    if not f then
+        return false
+    end
 
-
-    for i, entry in pairs(debugLines) do
-        fileWrite(f, entry.."\n")
+    for _, entry in ipairs(debugLines) do
+        fileWrite(f, entry .. "\n")
     end
 
     fileClose(f)
-
-    outputDebugString("Wrote debug to: " .. 'debug.txt')
+    outputDebugString("Wrote debug to: debug.txt")
     return true
 end
 
-
-metaList['Textures'] = {}
-metaList['Models'] = {}
-metaList['Collisons'] = {}
-metaList['Maps'] = {}
-metaList['Definitions'] = {}
-
-metaListOrder = {"Water","Maps","Definitions","Models","Collisons","Textures"}
+local metaListOrder = {"Water", "Maps", "Definitions", "Models", "Collisons", "Textures"}
 
 function prepMetaFile(path)
     local entries = {}
-    table.insert(entries,metaEntries[1])
-    table.insert(entries,"blank")
-    table.insert(entries,metaEntries[2])
-    table.insert(entries,"blank")
 
-    if fileExists('in/data/water.dat') then
-        copyFile('in/data/water.dat', 'out/water.dat',"Water",'water.dat')
+    -- Info + zone list, pulled from the configured map name/author.
+    table.insert(entries, {tag = "info", attributes = {author = mAuthor, version = "3.0.0", name = mapName}})
+    table.insert(entries, "blank")
+    table.insert(entries, fileEntry("eagleZones.txt"))
+    table.insert(entries, "blank")
+
+    if fileExists("in/data/water.dat") then
+        copyFile("in/data/water.dat", "out/water.dat", "Water", "water.dat")
     end
 
     if interiorValid then
-        table.insert(entries,                {
-            tag = "file",
-            attributes = {
-                src  = 'interiors.map',
-                type = "client",
-            }})
-
-        table.insert(entries,"blank")
+        table.insert(entries, fileEntry("interiors.map"))
+        table.insert(entries, "blank")
     end
 
     if IMGSupport then
-        table.insert(entries,                {
-            tag = "file",
-            attributes = {
-            src  = 'imgs/dff.img',
-            type = "client",
-        }})
-
-        table.insert(entries,                {
-            tag = "file",
-            attributes = {
-            src  = 'imgs/col.img',
-            type = "client",
-        }})
-
-        table.insert(entries,                {
-            tag = "file",
-            attributes = {
-            src  = 'imgs/txd.img',
-            type = "client",
-        }})
-
-        table.insert(entries,"blank")
+        table.insert(entries, fileEntry("imgs/dff.img"))
+        table.insert(entries, fileEntry("imgs/col.img"))
+        table.insert(entries, fileEntry("imgs/txd.img"))
+        table.insert(entries, "blank")
     end
 
-    for _,index in ipairs(metaListOrder) do
-        for i,v in pairs(metaList[index]) do
-            table.insert(entries,
-                {
-                tag = "file",
-                attributes = {
-                    src  = i,
-                    type = "client",
-                }})
+    for _, index in ipairs(metaListOrder) do
+        for src in pairs(metaList[index]) do
+            table.insert(entries, fileEntry(src))
         end
-        table.insert(entries,"blank")
+        table.insert(entries, "blank")
     end
 
     writeMetaFile(entries, path)
-
 end

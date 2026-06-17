@@ -1,9 +1,28 @@
 <meta>
-	<info type="script" name="" author="Blue Eagle" description="Blender map proccessor, take maps from blender and import them into MTA easily" version="1" />
-	<script type="server" src="config.lua" />
+	<info type="script" name="Eagle Map Processor" author="Blue Eagle" description="Convert GTA:SA maps to eagleLoader, an MTA:SA resource" version="1" />
 
-	<script type="server" src="Scripts/idListPrep.lua" />	
-	<script type="server" src="Scripts/helpers.lua" />	
+	<!-- ============================================================
+	     CONFIGURATION
+	     Edit the values below to configure the export. These can also
+	     be changed live from the server admin panel (Resources > Settings).
+	       mapName    : name of the generated output resource/map
+	       author     : author written into the generated meta.xml
+	       IMGSupport : "true" to pack models into .img containers
+	       offsetX/Y/Z : world offset added to every placement
+	     ============================================================ -->
+	<settings>
+		<setting name="*mapName"    value="Output" />
+		<setting name="*author"     value="Blue Eagle" />
+		<setting name="*IMGSupport" value="false" />
+		<setting name="*offsetX"    value="0" />
+		<setting name="*offsetY"    value="0" />
+		<setting name="*offsetZ"    value="0" />
+	</settings>
+
+	<script type="server" src="Scripts/config.lua" />
+
+	<script type="server" src="Scripts/idListPrep.lua" />
+	<script type="server" src="Scripts/helpers.lua" />
 	<script type="server" src="Scripts/mapFileWriter.lua" />
 	<script type="server" src="Scripts/definitionFileWriter.lua" />
 	<script type="server" src="Scripts/imgloader.lua" />
@@ -12,5 +31,4 @@
 	<script type="server" src="Scripts/iplLoader.lua" />
 	<script type="server" src="Scripts/ideLoader.lua" />
 	<script type="server" src="Scripts/gta3datLoader.lua" />
-	
 </meta>
